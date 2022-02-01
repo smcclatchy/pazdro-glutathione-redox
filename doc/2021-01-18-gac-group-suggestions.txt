@@ -1,0 +1,26 @@
+2022-01-18 GAC group meeting
+
+Gary's recos for Pazdro heart GSH data
+1. qq plots
+2. log, rankZ transform
+3. scatterplot GSH, GSSG
+4. log-log scale
+5. additive lm fit
+6. regression - look at intercept; significant? make biological sense?' red flag if not
+7. GSSG adj for GSH and vice versa - map GSHw/ GSSG as covar
+8. ratio fallacy - 1947 paper
+
+
+suggestions for Becca's early work
+is cohort/gen a factor variable?
+cohort x genotype as interactive covariate
+cohort x sex ...
+calc heritability - use sex + gen
+selective sweep on chr 2 - distortion effect
+gen 30 litter2
+gen 32 litter 2
+gen 35 litter 1
+
+use model.matrix (sex, gen) sex + gen
+rankz transform (not log ) - outliers
+sex + gen as factor
