@@ -21,9 +21,6 @@ load("../data/Heart-GSSG-enviornment.RData")
 # rankZ - function for rankZ transformation
 
 
-# open file to receive plots and set graphical parameters
-par(mfrow=2, mfcol=2)
-
 # plot the raw data from pheno
 
 pdf(file = "../results/raw-plots.pdf")
@@ -33,6 +30,19 @@ pheno %>%
   ggplot(aes(x = Heart_GSH, y = Heart_GSSG)) + 
   geom_point() +
   stat_smooth(method = "lm")
+
+# separate linear models by sex
+pheno %>% 
+  ggplot(aes(x = Heart_GSH, y = Heart_GSSG, color = as.factor(sex))) +
+  geom_point() +
+  stat_smooth(method = "lm")
+
+# separate linear models by generation
+pheno %>% 
+  ggplot(aes(x = Heart_GSH, y = Heart_GSSG, color = as.factor(generation))) +
+  geom_point() +
+  stat_smooth(method = "lm")
+
 qqnorm(pheno$Heart_GSH, main = "Heart GSH Q-Q Plot")
 qqline(pheno$Heart_GSH)
 qqnorm(pheno$Heart_GSSG, main = "Heart GSSG Q-Q Plot")
@@ -66,11 +76,35 @@ pheno %>%
 # remember to turn the PDF device off!
 dev.off()
 
-# linear model of GSH as response to GSSG
+# linear model of GSSG as response to GSH
 GSHlm <- lm(pheno$Heart_GSSG ~ pheno$Heart_GSH)
-print(summary(GSHlm))
+summary(GSHlm)
 intercept <- GSHlm$coefficients[[1]]
 slope <- GSHlm$coefficients[[2]]
 # equation for GSSG as a response to GSH
 # GSSG = 2.36 + -0.075*GSH
+plot(pheno$Heart_GSH, pheno$Heart_GSSG)
+abline(a = intercept, b = slope)
 
+# look at residuals vs fitted values
+resid <- GSHlm$residuals
+hist(resid)
+plot(fitted(GSHlm), residuals(GSHlm),
+     main = "Residuals vs Fitted values")
+cor(resid, fitted.values(GSHlm))
+
+# look at residuals vs predictor
+plot(pheno$Heart_GSH, residuals(GSHlm),
+     main = "Residuals vs GSH values")
+cor(resid, pheno$Heart_GSH)
+
+# look at residuals vs response
+plot(pheno$Heart_GSSG, residuals(GSHlm),
+     main = "Residuals vs GSSG values")
+cor(resid, pheno$Heart_GSSG)
+
+# look at GSH/GSSG ratio and residuals
+hist(pheno$Heart_GSHGSSGRatio)
+plot(pheno$Heart_GSHGSSGRatio, resid,  
+     main = "Residuals vs GSH/GSSG ratio values\nfor lm(GSSG ~ GSH)")
+cor(resid, pheno$Heart_GSHGSSGRatio)
