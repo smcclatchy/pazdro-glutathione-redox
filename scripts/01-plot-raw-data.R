@@ -73,9 +73,6 @@ pheno %>%
   geom_point(aes(color = as.factor(sex)), position=position_jitter(width=0.25, height=0)) +
   xlab("generation")  
 
-# remember to turn the PDF device off!
-dev.off()
-
 # linear model of GSSG as response to GSH
 GSHlm <- lm(pheno$Heart_GSSG ~ pheno$Heart_GSH)
 summary(GSHlm)
@@ -96,15 +93,20 @@ cor(resid, fitted.values(GSHlm))
 # look at residuals vs predictor
 plot(pheno$Heart_GSH, residuals(GSHlm),
      main = "Residuals vs GSH values")
-cor(resid, pheno$Heart_GSH)
+cor(resid, pheno$Heart_GSH) # 1.183569e-16
 
 # look at residuals vs response
 plot(pheno$Heart_GSSG, residuals(GSHlm),
      main = "Residuals vs GSSG values")
-cor(resid, pheno$Heart_GSSG)
+cor(resid, pheno$Heart_GSSG) # 0.9482969
 
 # look at GSH/GSSG ratio and residuals
 hist(pheno$Heart_GSHGSSGRatio)
 plot(pheno$Heart_GSHGSSGRatio, resid,  
      main = "Residuals vs GSH/GSSG ratio values\nfor lm(GSSG ~ GSH)")
-cor(resid, pheno$Heart_GSHGSSGRatio)
+cor(resid, pheno$Heart_GSHGSSGRatio) # -0.2577074
+
+# remember to turn the PDF device off!
+dev.off()
+
+

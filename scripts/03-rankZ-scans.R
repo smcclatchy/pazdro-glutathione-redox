@@ -53,8 +53,6 @@ plot_scan1(zScan, map = control$gmap,
            lodcolumn = "zGSHGSSG_Ratio", main = "RankZ transformed GSH/GSSG Ratio")
 abline(h = thresholds[3], col = "red", lwd = 2)
 
-dev.off()
-
 # for comparison repeat a genome scan on the untransformed phenotypes
 rawScan <- scan1(genoprobs = probs,
                  pheno = control$pheno[, c("Heart_GSH",
@@ -96,3 +94,6 @@ plot_scan1(rawScan, map = control$gmap,
            lodcolumn = "Heart_TotalGSH", 
            main = "Untransformed Total Heart GSH genome scan")
 abline(h = rawthresholds[3], col = "red", lwd = 2)
+
+dev.off()
+

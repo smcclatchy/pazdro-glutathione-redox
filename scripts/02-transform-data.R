@@ -8,7 +8,7 @@ library(tidyverse)
 # load data only if you don't already have it in your RStudio Environment
 # remove the hashtag and run the code below if you don't have it
 
-#load("../data/Heart-GSSG-enviornment.RData")
+load("../data/Heart-GSSG-enviornment.RData")
 
 # load rankZ function
 source("rankZ.R")
@@ -108,4 +108,5 @@ rownames(control$pheno) == control$pheno$ID
 which(names(control$pheno) %in% c("id", "ID"))
 head(control$pheno[, -c(9,12)])
 control$pheno <- control$pheno[, -c(9,12)]
+
 
