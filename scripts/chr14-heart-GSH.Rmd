@@ -1,0 +1,231 @@
+---
+title: "GSH studies in the DO"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r load_libraries, message=FALSE, echo=FALSE}
+# load libraries
+library(tidyverse)
+library(qtl2)
+library(knitr)
+```
+
+
+```{r load_data, echo=FALSE}
+# load data 
+load("../data/Heart-GSSG-enviornment.RData")
+sampleRuns <- read.csv("../data/sample-run-dates.csv")
+```
+
+
+```{r load_function, echo=FALSE}
+# load rankZ function
+source("rankZ.R")
+```
+
+This analysis follows finding of a chromosome 14 QTL peak for GSH in the heart. 
+```{r transform_variables, echo=FALSE}
+# rank Z transform variables
+zHeart_GSH <- rankZ(control$pheno[, "Heart_GSH"])
+zHeart_GSSG <- rankZ(control$pheno[, "Heart_GSSG"])
+zHeart_TotalGSH <- rankZ(control$pheno[, "Heart_TotalGSH"])
+zGSHGSSG_Ratio <- rankZ(control$pheno[, "Heart_GSHGSSGRatio"])
+```
+
+```{r add_transformed_variables, echo=FALSE}
+# put the rankZ-transformed variables back into the phenotypes
+control$pheno <- cbind(control$pheno,
+      zHeart_GSH,
+      zHeart_GSSG,
+      zHeart_TotalGSH,
+      zGSHGSSG_Ratio)
+
+# calculate and add in redox potential
+redoxPot <- (-264 + 31 * log10(control$pheno[,"Heart_GSSG"])/control$pheno[,"Heart_GSH"]^2)
+control$pheno <- cbind(control$pheno, redoxPot)
+```
+
+
+```{r add_covariates, echo=FALSE, results = "hide"}
+# add in sex and generation from pheno
+control$pheno <- cbind(control$pheno,
+                       pheno[match(rownames(control$pheno),
+                                   pheno$id), c("id", "sex", "generation")])
+
+# add in sample runs
+control$pheno <- cbind(control$pheno,
+                       sampleRuns[match(rownames(control$pheno),
+                                        sampleRuns$ID),])
+
+# make sure both sets of IDs match up, then remove the column with the ids and 
+# leave them as row names
+
+# sum of rownames not equal to id/ID should be 0
+sum(rownames(control$pheno) != control$pheno$id)
+sum(rownames(control$pheno) != control$pheno$ID)
+
+# what columns are id/ID in? Remove those columns
+which(names(control$pheno) %in% c("id", "ID"))
+head(control$pheno[, -c(which(names(control$pheno) %in% c("id", "ID")))])
+control$pheno <- control$pheno[, -c(which(names(control$pheno) %in% c("id", "ID")))]
+```
+
+The phenotypes includes GSH, GSSG and derivatives of these two measurements 
+(e.g. ratio of the two) along with rankZ-transformed variables to ensure a 
+normal distribution. There are `r dim(control$pheno)[2]` variables and 
+`r dim(control$pheno)[1]` observations. GSH has 
+`r sum(is.na(control$pheno[, "Heart_GSH"]))` missing values and GSSG has 
+`r sum(is.na(control$pheno[, "Heart_GSSG"]))` missing values. Total number of
+observations is equal to `r sum(!is.na(control$pheno[, "Heart_GSH"]))`.
+
+```{r head, echo=FALSE}
+head(control$pheno)
+```
+
+### Genome scan
+
+```{r genome_scan}
+# create a data frame with sex and generation
+addcovarSexGenBatch <- model.matrix(~ sex + generation,
+                               data = control$pheno)[,-1]
+
+# genome scans of rankZ-transformed variables with sex as covariate
+zScanSex <- scan1(genoprobs = probs,
+               pheno = control$pheno[, c("zHeart_GSH",
+                                         "zHeart_GSSG",
+                                         "zHeart_TotalGSH",
+                                         "zGSHGSSG_Ratio")],
+               kinship = kinship_loco,
+               addcovar = addcovarSexGenBatch[, "sex"])
+```
+
+
+```{r}
+# LOD thresholds with 10 permutations - increase to 1000 for publication
+Sexperms <- scan1perm(genoprobs = probs,
+                      pheno = control$pheno[, c("zHeart_GSH",
+                                                "zHeart_GSSG",
+                                                "zHeart_TotalGSH",
+                                                "zGSHGSSG_Ratio")],
+                      addcovar = addcovarSexGenBatch[, "sex"],
+                      n_perm = 10)
+summary(Sexperms)
+Sexthresholds <- summary(Sexperms)
+```
+### LOD peaks
+
+```{r}
+# use the thresholds to find LOD peaks that exceed the thresholds
+find_peaks(scan1_output = zScanSex,
+           map = control$pmap,
+           threshold = Sexthresholds,
+           prob = 0.95,
+           expand2markers = FALSE)
+
+# note position, LOD and confidence interval for the chromosome 14 peak
+```
+```{r}
+# explore the chromosome 14 peak
+plot_scan1(zScanSex, map = control$pmap,
+           lodcolumn = "zHeart_GSH", main = "GSH",
+           sub = "with sex as covariate")
+```
+
+### AJ, CAST and PWK are low
+
+```{r qtl_effects, echo=FALSE}
+# estimated QTL effects for chromosome 14
+# create database query functions
+query_variants <- create_variant_query_func("../data/cc_variants.sqlite")
+query_genes <- create_gene_query_func("../data/mouse_genes_mgi.sqlite")
+
+# use allele probabilities
+allele_prob <- genoprob_to_alleleprob(probs)
+
+# calculate kinship matrices for allele probabilities
+allele_kinship <- calc_kinship(allele_prob, "loco")
+
+# use best linear unbiased predictor (BLUP) scan
+c14blup <- scan1blup(genoprobs =  probs[,14], 
+                                      pheno = control$pheno["zHeart_GSH"], 
+                                      kinship = kinship_loco[[14]], 
+                                      addcovar = sex)
+
+plot_coefCC(x = c14blup, map = control$pmap,
+            scan1_output = zScanSex,
+            main = "Chromosome 14 Heart GSH BLUPs", 
+            sub="with sex as covariate",
+            legend = "topright", legend_ncol = 1, bgcolor="gray95")
+```
+
+
+There are 3 variants near the chromosome 14 peak at 54.2 Mbp. 
+
+
+```{r find_variants, echo=FALSE}
+# find variants and genes within the chromosome 14 peak interval
+# grab the variants in the interval 49-53 Mbp on chromosome 14
+variants_14_49_55 <- query_variants(14, 49, 55)
+
+# grab the genes overlapping the interval 49-53 Mbp on chromosome 14
+genes_14_49_55 <- query_genes(14, 49, 55)
+
+scan_snps <- scan1snps(probs, control$pmap, 
+                       control$pheno[, c("zHeart_GSH", "zHeart_GSSG", 
+                                         "zHeart_TotalGSH", "zGSHGSSG_Ratio")],
+                       kinship_loco[["14"]], 
+                       sex, 
+                       query_func=query_variants,
+                        chr=14, 
+                       start=49, 
+                       end=55, 
+                       keep_all_snps=TRUE)
+
+plot_snpasso(scan_snps$lod, scan_snps$snpinfo, drop_hilit=1.5,
+             genes = genes_14_49_55, sdp_panel=TRUE, 
+             main = "Heart GSH SNPs on chromosome 14")
+```
+
+### Top snps
+```{r top_snps, echo=FALSE}
+top <- top_snps(scan_snps$lod, scan_snps$snpinfo)
+print(top[,c(1:3, 8:16, 20)], row.names=FALSE)
+```
+
+Look on Ensembl mouse genome browser build 38 for more information about these variants. Go to the genome build archive at
+https://nov2020.archive.ensembl.org/Mus_musculus
+
+The first SNP is different for 129, NOD and NZO.
+[region of SNP rs587249600](https://nov2020.archive.ensembl.org/Mus_musculus/Location/View?r=14%3A49380000-49390000)
+
+The 3 structural variants near 54.2 Mbp look interesting. What else do we know
+about them?
+
+```{r, echo=FALSE}
+print(top[,c(1:6, 16, 20)], row.names=FALSE)
+```
+
+These are insertions or deletions rather than SNPs. 
+
+[region of the 3 structural variants](https://nov2020.archive.ensembl.org/Mus_musculus/Location/View?r=14%3A54090000-54343200)
+See the track for smaller variants to locate those indicated in the table above.
+Genome coordinates shouldn't be too far off.
+
+[SV_14_54091931_54091933 maps as insertion rs387900728, which is an intron variant of gene model Gm30275](https://nov2020.archive.ensembl.org/Mus_musculus/Variation/Explore?db=core;r=14:54091900-54091940;source=dbSNP;v=rs387900728;vdb=variation;vf=70683877)
+
+[SV_14_54091931_54091933 also maps to intron variant rs585988314, which also affects gene model Gm30275](https://nov2020.archive.ensembl.org/Mus_musculus/Variation/Explore?db=core;r=14:54091900-54091940;source=dbSNP;v=rs387900728;vdb=variation;vf=70683877)
+
+[SV_14_54279758_54279776 overlaps SNP rs248305752, which is a 3 prime UTR variant](https://nov2020.archive.ensembl.org/Mus_musculus/Variation/Explore?db=core;r=14:54279750-54279780;source=dbSNP;v=rs248305752;vdb=variation;vf=51738738)
+however, it's not a single nucleotide but rather an insertion of 18 nucleotides
+
+[deletion SV_14_54342903_54343261](https://nov2020.archive.ensembl.org/Mus_musculus/Location/View?r=14:54342910-54343180;db=core) can be found in the SV - smaller
+variants track and has been found in strains AJ, CAST/EiJ and PWK/PhJ. This 
+deletion overlaps 
+[CTCF binding site ENSMUSR00000347935](https://nov2020.archive.ensembl.org/Mus_musculus/Regulation/Summary?db=core;fdb=funcgen;r=14:54342900-54343270;rf=ENSMUSR00000347935)
+Downstream genes whose transcription might be affected include 
+[Oxa1l](https://nov2020.archive.ensembl.org/Mus_musculus/Gene/Summary?db=core;g=ENSMUSG00000000959;r=14:54295605-54390580;t=ENSMUST00000198107),
+[Mrpl52](https://nov2020.archive.ensembl.org/Mus_musculus/Gene/Summary?db=core;g=ENSMUSG00000010406;r=14:54343094-54533045;t=ENSMUST00000010550),
+[Lrp10](https://nov2020.archive.ensembl.org/Mus_musculus/Gene/Summary?db=core;g=ENSMUSG00000022175;r=14:54343094-54533045;t=ENSMUST00000228407) and
+[Rem2](https://nov2020.archive.ensembl.org/Mus_musculus/Gene/Summary?db=core;g=ENSMUSG00000022176;r=14:54343094-54533045;t=ENSMUST00000170337).
