@@ -109,4 +109,13 @@ which(names(control$pheno) %in% c("id", "ID"))
 head(control$pheno[, -c(9,12)])
 control$pheno <- control$pheno[, -c(9,12)]
 
+redoxPot <- (-264 + 31 * log10(control$pheno[,"Heart_GSSG"]/control$pheno[,"Heart_GSH"]^2))
+redoxPot
+names(redoxPot)
+names(redoxPot) <- "redoxPotential"
+names(redoxPot)
+zredoxPot <- rankZ(control$pheno[, "redoxPot"])
+cbind(control$pheno, redoxPot, zredoxPot)
+control$pheno <- cbind(control$pheno, redoxPot, zredoxPot)
 
+save(control, file = "../data/transformed-data.Rdata")

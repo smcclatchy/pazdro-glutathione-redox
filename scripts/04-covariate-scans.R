@@ -4,12 +4,12 @@ library(qtl2)
 # remove the hashtag and run the code below if you don't have it
 
 # load("../data/Heart-GSSG-enviornment.RData")
-
+load("../data/transformed-data.Rdata")
 # run a genome scan on the rankZ transformed phenotypes
 # use sex and generation as covariates
 
 # create a data frame with sex and generation
-addcovarSexGenBatch <- model.matrix(~ sex + generation + Set.No,
+addcovarSexGenBatch <- model.matrix(~ sex + generation,
                                data = control$pheno)[,-1]
 
 # genome scans with sex, generation and batch as individual covariates
@@ -18,7 +18,8 @@ zScanSex <- scan1(genoprobs = probs,
                pheno = control$pheno[, c("zHeart_GSH",
                                          "zHeart_GSSG",
                                          "zHeart_TotalGSH",
-                                         "zGSHGSSG_Ratio")],
+                                         "zGSHGSSG_Ratio",
+                                         "zredoxPot")],
                kinship = kinship_loco,
                addcovar = addcovarSexGenBatch[, "sex"])
 
@@ -226,3 +227,6 @@ plot_scan1(zScanSexGenBatch, map = control$gmap,
 abline(h = thresholds[4], col = "red", lwd = 2)
 
 dev.off()
+
+# output genome scan with sex as covariate along with permutations
+save(zScanSex, Sexperms, file = "../data/genome-scans-thresholds-sex.RData")
