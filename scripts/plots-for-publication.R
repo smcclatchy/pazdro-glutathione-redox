@@ -128,14 +128,19 @@ histRatio <- control$pheno %>%
 
 histRedoxpot <- control$pheno %>%
   ggplot(aes(x = redoxPot)) +
-  geom_histogram(binwidth) +
+  geom_histogram(binwidth=20) +
   labs(x = "Redox potential")
 
-histGSH + histGSSG + histTotal + histRatio + histRedoxpot +
+histGSH + histGSSG + 
   plot_annotation(title = 'Glutatathione (GSH) and reduced glutathione (GSSG) data distribution')
 
-# set graphical parameters to 3 rows, 2 columns
-par(mfrow=c(3,2))
+histTotal + histRatio + histRedoxpot +
+  plot_annotation(title = 'Data distributions of derived Glutatathione (GSH) and reduced glutathione (GSSG) measurements')
+
+pdf(file = "../results/GSH-GSSG-stacked-scans.pdf")
+
+# set graphical parameters to 2 rows, 1 column
+par(mfrow=c(2,1))
 
 scanPlotGSH <- plot_scan1(zScanSex, map = control$pmap,
            lodcolumn = "zHeart_GSH", main = "GSH",
@@ -144,6 +149,13 @@ scanPlotGSH <- plot_scan1(zScanSex, map = control$pmap,
 scanPlotGSG <- plot_scan1(zScanSex, map = control$pmap,
                           lodcolumn = "zHeart_GSSG", main = "GSSG",
                           sub = "with sex as covariate")
+
+dev.off()
+
+pdf(file = "../results/derived-stacked-scans.pdf")
+
+# set graphical parameters to 3 rows, 1 column
+par(mfrow=c(3,1))
 
 scanPlotTotal <- plot_scan1(zScanSex, map = control$pmap,
                           lodcolumn = "zHeart_TotalGSH", main = "Total GSH",
@@ -156,3 +168,5 @@ scanPlotRatio <- plot_scan1(zScanSex, map = control$pmap,
 scanPlotRedoxPot <- plot_scan1(zScanSex, map = control$pmap,
                           lodcolumn = "zredoxPot", main = "Redox potential",
                           sub = "with sex as covariate")
+
+dev.off()
