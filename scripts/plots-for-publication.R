@@ -7,7 +7,11 @@ library(patchwork)
 # load data
 load("../data/Heart-GSSG-enviornment.RData")
 covariates <- read.csv("../data/R01_GSH_DO_covar.csv")
+redoxPot <- (-264 + 31 * log10(control$pheno[,"Heart_GSSG"]/control$pheno[,"Heart_GSH"]^2))
 
+
+# convert phenotypes to data frame for plotting
+control$pheno <- as.data.frame(control$pheno)
 
 pdf(file = "../results/pub-quality-raw-plots.pdf")
 
@@ -15,13 +19,13 @@ control$pheno %>%
   ggplot(aes(x = Heart_GSH)) +
   geom_histogram(binwidth = .5) +
   labs(x = "GSH",
-       title = "Histogram of Heart GSH Measurements")
+       title = "Histogram of Glutathione Measurements")
 
 control$pheno %>%
   ggplot(aes(x = Heart_GSSG)) +
   geom_histogram() +
   labs(x = "GSSG",
-       title = "Histogram of Heart GSSG Measurements")
+       title = "Histogram of Reduced Glutathione Measurements")
 
 control$pheno %>%
   ggplot(aes(sample = Heart_GSH)) +
@@ -109,7 +113,7 @@ dev.off()
 histGSH <- control$pheno %>%
   ggplot(aes(x = Heart_GSH)) +
   geom_histogram(binwidth = .5) +
-  labs(x = "GSH (nmol/mg)")
+  labs(x = "Glutathione (nmol/mg)")
 
 histGSSG <- control$pheno %>%
   ggplot(aes(x = Heart_GSSG)) +
@@ -124,49 +128,51 @@ histTotal <- control$pheno %>%
 histRatio <- control$pheno %>%
   ggplot(aes(x = Heart_GSHGSSGRatio)) +
   geom_histogram() +
-  labs(x = "GSSG/GSH ratio (nmol/mg)")
+  labs(x = "GSH:GSSG")
 
 histRedoxpot <- control$pheno %>%
   ggplot(aes(x = redoxPot)) +
   geom_histogram(binwidth=20) +
   labs(x = "Redox potential")
 
+png(filename = "../results/raw-histograms.png")
 histGSH + histGSSG + 
   plot_annotation(title = 'Glutatathione (GSH) and reduced glutathione (GSSG) data distribution')
+dev.off()
 
+png(filename = "../results/derived-histograms.png")
 histTotal + histRatio + histRedoxpot +
-  plot_annotation(title = 'Data distributions of derived Glutatathione (GSH) and reduced glutathione (GSSG) measurements')
+  plot_annotation(title = 'Data distributions of derived and reduced glutathione measurements')
+dev.off()
 
-pdf(file = "../results/GSH-GSSG-stacked-scans.pdf")
+png(file = "../results/GSH-GSSG-stacked-scans.png")
 
-# set graphical parameters to 2 rows, 1 column
+# set graphical parameters to 2 rows, 1 column and y-axis to max LOD score
 par(mfrow=c(2,1))
+ylim=c(0, ceiling(maxlod(zScanSex)))
 
-scanPlotGSH <- plot_scan1(zScanSex, map = control$pmap,
-           lodcolumn = "zHeart_GSH", main = "GSH",
-           sub = "with sex as covariate")
+plot_scan1(zScanSex, map = control$pmap,
+           lodcolumn = "zHeart_GSH", main = "Glutathione genome scan",
+           ylim=ylim)
 
-scanPlotGSG <- plot_scan1(zScanSex, map = control$pmap,
-                          lodcolumn = "zHeart_GSSG", main = "GSSG",
-                          sub = "with sex as covariate")
+plot_scan1(zScanSex, map = control$pmap,
+                          lodcolumn = "zHeart_GSSG", 
+           main = "Reduced glutathione genome scan",
+           ylim=ylim)
 
 dev.off()
 
-pdf(file = "../results/derived-stacked-scans.pdf")
+png(file = "../results/derived-stacked-scans.png")
 
 # set graphical parameters to 3 rows, 1 column
 par(mfrow=c(3,1))
+plot_scan1(zScanSex, map = control$pmap, lodcolumn = "zHeart_TotalGSH",
+                            main = "Total glutathione", ylim=ylim)
 
-scanPlotTotal <- plot_scan1(zScanSex, map = control$pmap,
-                          lodcolumn = "zHeart_TotalGSH", main = "Total GSH",
-                          sub = "with sex as covariate")
+plot_scan1(zScanSex, map = control$pmap, lodcolumn = "zGSHGSSG_Ratio", 
+           main = "Ratio of oxidized to reduced glutathione", ylim=ylim)
 
-scanPlotRatio <- plot_scan1(zScanSex, map = control$pmap,
-                          lodcolumn = "zGSHGSSG_Ratio", main = "GSH/GSSG Ratio",
-                          sub = "with sex as covariate")
-
-scanPlotRedoxPot <- plot_scan1(zScanSex, map = control$pmap,
-                          lodcolumn = "zredoxPot", main = "Redox potential",
-                          sub = "with sex as covariate")
+plot_scan1(zScanSex, map = control$pmap, lodcolumn = "zredoxPot", 
+           main = "Oxidation-reduction potential", ylim=ylim)
 
 dev.off()
