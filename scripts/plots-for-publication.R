@@ -145,6 +145,11 @@ histTotal + histRatio + histRedoxpot +
   plot_annotation(title = 'Data distributions of derived and reduced glutathione measurements')
 dev.off()
 
+png(filename = "../results/all-histograms.png")
+histGSH + histGSSG + histTotal + histRatio + histRedoxpot +
+  plot_annotation(title = 'Data distributions of all glutathione measurements')
+dev.off()
+
 png(file = "../results/GSH-GSSG-stacked-scans.png")
 
 # set graphical parameters to 2 rows, 1 column and y-axis to max LOD score
